@@ -5092,21 +5092,23 @@ func (pm *PathMap) remove(path string) {
 
 // iter() calls the hook for each (path, blob) pair in the PathMap
 func (pm *PathMap) iter(hook func(string, interface{})) {
-	pm._iter(&[]string{}, hook)
+	pm._iter(new(bytes.Buffer), hook)
 }
 
-func (pm *PathMap) _iter(prefix *[]string, hook func(string, interface{})){
-	pos := len(*prefix)
-	*prefix = append(*prefix, "")
+func (pm *PathMap) _iter(buf *bytes.Buffer, hook func(string, interface{})){
+	pos := buf.Len()
+	buf.WriteByte(svnSep[0])
 	for component, subdir := range pm.dirs {
-		(*prefix)[pos] = component
-		subdir._iter(prefix, hook)
+		buf.Truncate(pos+1)
+		buf.WriteString(component)
+		subdir._iter(buf, hook)
 	}
 	for component, elt := range pm.blobs {
-		(*prefix)[pos] = component
-		hook(strings.Join(*prefix, svnSep), elt)
+		buf.Truncate(pos+1)
+		buf.WriteString(component)
+		hook(string(buf.Bytes()[1:]), elt)
 	}
-	*prefix = (*prefix)[:pos]
+	buf.Truncate(pos)
 }
 
 func (pm *PathMap) size() int {
